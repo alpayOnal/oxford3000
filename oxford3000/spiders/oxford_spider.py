@@ -26,8 +26,37 @@ class OxfordSpider(scrapy.Spider):
             yield scrapy.Request(word_page, callback=self.parse_word)
 
     def parse_word(self, response):
-        yield {
+
+        definitions = []
+        for details in response.css('.sn-g'):
+            sentences = details.css('.x-g ::text').extract()
+            sentences = [sentence for sentence in sentences if sentence.split() != u' ']
+            definitions.append({
+                'def': details.css('.def::text').extract(),
+                'sentences': sentences
+            })
+
+        examples = []
+        for item in response.css('span[title="Extra examples"] .x'):
+            examples.append(item.css('::text').extract()[0])
+
+        nearby_words = []
+        for item in response.css('.nearby .hwd'):
+            if len(item.css('::text').extract()) > 0 and len(item.css('pos::text').extract()) > 0:
+                nearby_words.append({
+                    'word': item.css('::text').extract()[0],
+                    'type': item.css('pos::text').extract()[0]
+                })
+
+        parsed_word = {
             'word': response.css('h2.h::text').extract()[0],
-            'description': response.css('#entryContent').extract(),
-            'nearby_words': response.css('.nearby').extract(),
+            'word_origin': " ".join(response.css('span[title="Word Origin"] .p::text').extract()),
+            'nearby_words': nearby_words,
+            'pron_us': response.css('div.pron-us::attr(data-src-mp3)').extract()[0],
+            'pron_uk': response.css('div.pron-uk::attr(data-src-mp3)').extract()[0],
+            'examples': examples,
+            'definitions': definitions,
+            'type': response.css('.pos::text').extract()[0]
         }
+
+        yield parsed_word
