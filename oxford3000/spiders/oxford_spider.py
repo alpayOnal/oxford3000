@@ -1,4 +1,7 @@
 import scrapy
+from tinydb import TinyDB, Query
+
+db = TinyDB('db.json')
 
 
 class OxfordSpider(scrapy.Spider):
@@ -49,6 +52,7 @@ class OxfordSpider(scrapy.Spider):
                 })
 
         parsed_word = {
+            'url': response.url,
             'word': response.css('h2.h::text').extract()[0],
             'word_origin': " ".join(response.css('span[title="Word Origin"] .p::text').extract()),
             'nearby_words': nearby_words,
@@ -58,5 +62,5 @@ class OxfordSpider(scrapy.Spider):
             'definitions': definitions,
             'type': response.css('.pos::text').extract()[0]
         }
-
-        yield parsed_word
+        
+        db.insert(parsed_word)
